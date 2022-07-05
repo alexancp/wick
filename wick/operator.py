@@ -258,6 +258,16 @@ class Tensor(object):
         newindices = [idx_copy(i) for i in self.indices]
         return Tensor(newindices, self.name, self.sym)
 
+    def update_index_spaces(self, old_indices, new_indices):
+        indices = []
+        for index in self.indices:
+            for i, old_index in enumerate(old_indices):
+                if index == old_index:
+                    indices.append(idx_copy(new_indices[i]))
+                    break
+            else:
+                indices.append(idx_copy(self.indices[i]))
+        return Tensor(indices, self.name, self.sym)
 
 def permute(t, p):
     name = str(t.name)
@@ -312,10 +322,19 @@ class Sigma(object):
     def copy(self):
         return Sigma(idx_copy(self.idx))
 
+    def update_index_spaces(self, old_indices, new_indices):
+        for i, index in enumerate(old_indices):
+            if self.idx == index:
+                new_index = idx_copy(new_indices[i])
+                break
+        else:
+            new_index = idx_copy(self.idx)
+        return Sigma(new_index)
+
 
 class Delta(object):
     """
-    Class reprenting a delta function.
+    Class representing a delta function.
 
     Attributes:
         i1 (Idx): First index

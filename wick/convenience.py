@@ -969,3 +969,198 @@ def PE1(ospace, vspace, index_key=None):
 def commute(A, B):
     """ Return the commutator of two operators"""
     return A*B - B*A
+
+
+def one_e_spin(name, spaces, norder=False, index_key=None):
+    """
+    Make one electron operator for spin spaces
+    Each element of spaces is a tuple or list of
+    occupied and virtual spaces for a given spin symmetry
+    """
+    expressions = Expression([])
+    for s in spaces:
+        expr = one_e(name, s, norder, index_key)
+        expressions = expressions + expr
+    return expressions
+
+
+def two_e_spin(name, spin_spaces, norder=False, index_key=None):
+    """
+    Make symmetric 2 electron operator p,q,r,s where p,q need to have the same spin and r,s as well
+    spin_spaces: list of tuples, where each tuple is the space for a given spin
+    """
+    terms = []
+    sym = TensorSym([(0, 1, 2, 3), (2, 3, 0, 1)], [1, 1])
+
+    factor = Fraction(1, 2)
+    for spin1 in spin_spaces:
+        for space1_spin1 in spin1:
+            p = Idx(0, space1_spin1)
+            for space2_spin1 in spin1:
+                i = 0 if space1_spin1 != space2_spin1 else 1
+                q = Idx(i, space2_spin1)
+
+                for spin2 in spin_spaces:
+                    for space1_spin2 in spin2:
+                        # True == 1 and False == 0
+                        i = sum([space1_spin2 == s for s in [space1_spin1, space2_spin1]])
+                        r = Idx(i, space1_spin2)
+
+                        for space2_spin2 in spin2:
+                            # True == 1 and False == 0
+                            i = sum([space2_spin2 == s for s in [space1_spin1, space2_spin1, space1_spin2]])
+                            s = Idx(i, space2_spin2)
+
+                            operators = [
+                                FOperator(p, True), FOperator(r, True),
+                                FOperator(s, False), FOperator(q, False)]
+                            sigmas = [Sigma(p), Sigma(q), Sigma(r), Sigma(s)]
+                            tensors = [Tensor([p, q, r, s], name, sym=sym)]
+                            nsign = 1
+                            if norder:
+                                operators, nsign = normal_ordered(operators)
+                            t = Term(
+                                nsign*factor, sigmas, tensors,
+                                operators, [], index_key=index_key)
+                            terms.append(t)
+    return Expression(terms)
+
+
+def e_pqrs_operator(name, spin_spaces, norder=False, index_key=None):
+    """
+    Make symmetric 2 electron operator p,q,r,s where p,q need to have the same spin and r,s as well
+    spin_spaces: list of tuples, where each tuple is the space for a given spin
+    """
+    two_e_part = two_e_spin(name, spin_spaces, norder, index_key)
+
+    one_e_part = []
+    sym = TensorSym([(0, 1, 2, 3), (2, 3, 0, 1)], [1, 1])
+
+    factor = Fraction(1, 2)
+    for spin in spin_spaces:
+        for p_space in spin:
+            p = Idx(0, p_space)
+            for q_space in spin:
+                i = 0 if q_space != p_space else 1
+                q = Idx(i, q_space)
+
+                for s_space in spin:
+                    # True == 1 and False == 0
+                    i = sum([s_space == s for s in [p_space, q_space]])
+                    s = Idx(i, s_space)
+                    operators = [FOperator(p, True), FOperator(s, False)]
+                    sigmas = [Sigma(p), Sigma(q), Sigma(s)]
+                    tensors = [Tensor([p, q, q, s], name, sym=sym)]
+                    nsign = 1
+                    if norder:
+                        operators, nsign = normal_ordered(operators)
+                    t = Term(
+                        nsign*factor, sigmas, tensors,
+                        operators, [], index_key=index_key)
+                    one_e_part.append(t)
+    return two_e_part + Expression(one_e_part)
+
+
+
+def E1_spin(name, ospaces, vspaces, index_key=None):
+    """
+    Return the tensor representation of a Fermion excitation operator
+
+    name (string): name of the tensor
+    ospaces (list): list of occupied spaces
+    vspaces (list): list of virtual spaces
+    """
+    expressions = Expression([])
+    for o, v in zip(ospaces, vspaces):
+        if not isinstance(o, (list, tuple)):
+            o = list(o)
+        if not isinstance(v, (list, tuple)):
+            v = list(v)
+        e1 = E1(name, o, v, index_key=index_key)
+        expressions = expressions + e1
+    return expressions
+
+
+def E2_spin(name, spaces, index_key=None):
+    """
+    Return the tensor representation of a Fermion excitation operator
+
+    name (string): name of the tensor
+    spaces (list): list of tuples of occupied, virtual space for different spins
+    """
+    terms = []
+    scalar = Fraction(1, 2)
+    sym = TensorSym([(0, 1, 2, 3), (2, 3, 0, 1)], [1, 1])
+    for s1 in spaces:
+        i = Idx(0, s1[0])
+        a = Idx(0, s1[1])
+        for s2 in spaces:
+            o_2 = 0 if s1[0] != s2[0] else 1
+            v_2 = 0 if s1[1] != s2[1] else 1
+            j = Idx(o_2, s2[0])
+            b = Idx(v_2, s2[1])
+            sums = [Sigma(i), Sigma(a), Sigma(j), Sigma(b)]
+            tensors = [Tensor([a, i, b, j], name, sym=sym)]
+            operators = [
+                        FOperator(a, True), FOperator(b, True),
+                        FOperator(j, False), FOperator(i, False)]
+            e2 = Term(scalar, sums, tensors, operators,
+                      [], index_key=index_key)
+            terms.append(e2)
+    return Expression(terms)
+
+
+
+def braE1_spin(ospaces, vspaces, index_key=None):
+    """
+    Return left-projector onto a space of single excitations
+
+    ospaces (str): occupied space for alpha and beta spin
+    vspaces (str): virtual space for alpha and beta spin
+    """
+    expressions = Expression([])
+    factor = Fraction(1, 2)
+    for o, v in zip(ospaces, vspaces):
+        e1 = braE1(o, v, index_key=index_key)
+        expressions = expressions + e1
+    return factor * expressions
+
+
+def braE2_spin(spaces, index_key=None):
+    """
+    Return left-projector onto a space of double excitations
+    spaces (list): list of tuples of occupied, virtual space for different spins
+    """
+    terms = []
+    factor1 = Fraction(1, 3)
+    factor2 = Fraction(1, 6)
+    #sym = TensorSym([(0, 1, 2, 3), (2, 3, 0, 1)], [1, 1])
+    for s1 in spaces:
+        i = Idx(0, s1[0])
+        a = Idx(0, s1[1])
+        for s2 in spaces:
+            o_2 = 0 if s1[0] != s2[0] else 1
+            v_2 = 0 if s1[1] != s2[1] else 1
+            j = Idx(o_2, s2[0])
+            b = Idx(v_2, s2[1])
+
+            #tensors = [Tensor([a, i, b, j], "", sym=sym)]
+            tensors = [Tensor([a, i, b, j], "")]
+            operators = [
+                FOperator(i, True), FOperator(j, True),
+                FOperator(b, False), FOperator(a, False)]
+            bra2 = Term(factor1, [], tensors, operators,
+                        [], index_key=index_key)
+            terms.append(bra2)
+
+            #tensors = [Tensor([a, j, b, i], "", sym=sym)]
+            tensors = [Tensor([a, j, b, i], "")]
+            operators = [
+                FOperator(j, True), FOperator(i, True),
+                FOperator(a, False), FOperator(b, False),
+                ]
+            bra2 = Term(factor2, [], tensors, operators,
+                        [], index_key=index_key)
+            terms.append(bra2)
+
+    return Expression(terms)

@@ -652,6 +652,31 @@ class ATerm(object):
             scalar=newscalar, sums=newsums,
             tensors=newtensors, index_key=self.index_key)
 
+    def update_index_spaces(self, new_spaces):
+        from wick.index import Idx, idx_copy
+        """
+        Update index spaces according to the dictionary new_spaces.
+        new_spaces (dict): key: name of old space, value: name of new space
+        """
+        old_indices = sorted(list(set(self.ilist())))
+        counters = {i:0 for i in new_spaces.values()}
+
+        new_indices = []
+        for index in old_indices:
+            if index.space in new_spaces:
+                new_space = new_spaces[index.space]
+                new_indices.append(Idx(counters[new_space], new_space))
+                counters[new_space] += 1
+            else:
+                new_indices.append(idx_copy(index))
+
+        new_tensors = [t.update_index_spaces(old_indices, new_indices) for t in self.tensors]
+        new_sums = [s.update_index_spaces(old_indices, new_indices) for s in self.sums]
+
+        return ATerm(
+            scalar=self.scalar, sums=new_sums,
+            tensors=new_tensors, index_key=self.index_key)
+
 
 class Expression(object):
     """Operator expression
@@ -884,3 +909,11 @@ class AExpression(object):
     def transpose(self, perm):
         for t in self.terms:
             t.transpose(perm)
+
+    def update_index_spaces(self, space_dict):
+        """
+        Update index spaces according to the dictionary new_spaces.
+        new_spaces (dict): key: name of old space, value: name of new space
+        """
+        terms = [t.update_index_spaces(space_dict) for t in self.terms]
+        return AExpression(terms=terms, simplify=False)
