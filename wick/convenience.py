@@ -1073,9 +1073,9 @@ def E1_spin(name, ospaces, vspaces, index_key=None):
     expressions = Expression([])
     for o, v in zip(ospaces, vspaces):
         if not isinstance(o, (list, tuple)):
-            o = list(o)
+            o = [o]
         if not isinstance(v, (list, tuple)):
-            v = list(v)
+            v = [v]
         e1 = E1(name, o, v, index_key=index_key)
         expressions = expressions + e1
     return expressions
@@ -1083,7 +1083,7 @@ def E1_spin(name, ospaces, vspaces, index_key=None):
 
 def E2_spin(name, spaces, index_key=None):
     """
-    Return the tensor representation of a Fermion excitation operator
+    Return the tensor representation of a Fermion double excitation operator
 
     name (string): name of the tensor
     spaces (list): list of tuples of occupied, virtual space for different spins
