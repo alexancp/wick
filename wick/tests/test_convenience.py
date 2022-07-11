@@ -33,7 +33,7 @@ class ConvenienceTest(unittest.TestCase):
             [], [Delta(i, j), Delta(a, b)])
         ref = Expression([tr1])
         aref = AExpression(Ex=ref)
-        self.assertTrue(aout.pmatch(aref))
+        self.assertTrue(aout.permutation_matches(aref))
 
         op = E1("A", ["occ"], ["vir"])
         out = apply_wick(bra*op)
@@ -76,7 +76,7 @@ class ConvenienceTest(unittest.TestCase):
             [Delta(i, l), Delta(j, k), Delta(a, d), Delta(b, c)])
         ref = Expression([tr1, tr2, tr3, tr4])
         aref = AExpression(Ex=ref)
-        self.assertTrue(aout.pmatch(aref))
+        self.assertTrue(aout.permutation_matches(aref))
 
         op = E2("A", ["occ"], ["vir"])
         out = apply_wick(bra*op)
@@ -86,7 +86,7 @@ class ConvenienceTest(unittest.TestCase):
         ten = Tensor([a, b, i, j], "A", sym=get_sym(True))
         at1 = ATerm(scalar=1, sums=[], tensors=[ext, ten])
         self.assertTrue(len(aout.terms) == 1)
-        self.assertTrue(at1.pmatch(aout.terms[0]))
+        self.assertTrue(at1.permutation_matches(aout.terms[0]))
 
     def testEip1(self):
         bra = braEip1("occ")
@@ -101,7 +101,7 @@ class ConvenienceTest(unittest.TestCase):
             [], [Delta(i, j)])
         ref = Expression([tr1])
         aref = AExpression(Ex=ref)
-        self.assertTrue(aout.pmatch(aref))
+        self.assertTrue(aout.permutation_matches(aref))
 
         op = Eip1("A", ["occ"])
         out = apply_wick(bra*op)
@@ -136,7 +136,7 @@ class ConvenienceTest(unittest.TestCase):
             [Delta(i, l), Delta(j, k), Delta(a, c)])
         ref = Expression([tr1, tr2])
         aref = AExpression(Ex=ref)
-        self.assertTrue(aout.pmatch(aref))
+        self.assertTrue(aout.permutation_matches(aref))
 
         op = Eip2("A", ["occ"], ["vir"])
         out = apply_wick(bra*op)
@@ -146,7 +146,7 @@ class ConvenienceTest(unittest.TestCase):
         ten = Tensor([a, i, j], "A", sym=get_sym_ip2())
         at1 = ATerm(scalar=1, sums=[], tensors=[ext, ten])
         self.assertTrue(len(aout.terms) == 1)
-        self.assertTrue(at1.pmatch(aout.terms[0]))
+        self.assertTrue(at1.permutation_matches(aout.terms[0]))
 
     def testEdip1(self):
         bra = braEdip1("occ", "occ")
@@ -169,7 +169,7 @@ class ConvenienceTest(unittest.TestCase):
             [Delta(i, l), Delta(j, k)])
         ref = Expression([tr1, tr2])
         aref = AExpression(Ex=ref)
-        self.assertTrue(aout.pmatch(aref))
+        self.assertTrue(aout.permutation_matches(aref))
 
     def testEea1(self):
         bra = braEea1("vir")
@@ -184,7 +184,7 @@ class ConvenienceTest(unittest.TestCase):
             [], [Delta(a, b)])
         ref = Expression([tr1])
         aref = AExpression(Ex=ref)
-        self.assertTrue(aout.pmatch(aref))
+        self.assertTrue(aout.permutation_matches(aref))
 
         op = Eea1("A", ["vir"])
         out = apply_wick(bra*op)
@@ -218,7 +218,7 @@ class ConvenienceTest(unittest.TestCase):
             [Delta(i, k), Delta(a, d), Delta(b, c)])
         ref = Expression([tr1, tr2])
         aref = AExpression(Ex=ref)
-        self.assertTrue(aout.pmatch(aref))
+        self.assertTrue(aout.permutation_matches(aref))
 
         op = Eea2("A", ["occ"], ["vir"])
         out = apply_wick(bra*op)
@@ -228,7 +228,7 @@ class ConvenienceTest(unittest.TestCase):
         ten = Tensor([a, b, i], "A", sym=get_sym_ea2())
         at1 = ATerm(scalar=1, sums=[], tensors=[ext, ten])
         self.assertTrue(len(aout.terms) == 1)
-        self.assertTrue(at1.pmatch(aout.terms[0]))
+        self.assertTrue(at1.permutation_matches(aout.terms[0]))
 
     def testEdea1(self):
         bra = braEdea1("vir", "vir")
@@ -251,7 +251,7 @@ class ConvenienceTest(unittest.TestCase):
             [Delta(a, d), Delta(b, c)])
         ref = Expression([tr1, tr2])
         aref = AExpression(Ex=ref)
-        self.assertTrue(aout.pmatch(aref))
+        self.assertTrue(aout.permutation_matches(aref))
 
     def testP1(self):
         bra = braP1("nm")
@@ -268,7 +268,7 @@ class ConvenienceTest(unittest.TestCase):
             1, [], tensors, [], [Delta(x, y)])
         ref = Expression([tr1])
         aref = AExpression(Ex=ref)
-        self.assertTrue(aout.pmatch(aref))
+        self.assertTrue(aout.permutation_matches(aref))
 
         op = P1("A", ["nm"])
         out = apply_wick(bra*op)
@@ -298,7 +298,7 @@ class ConvenienceTest(unittest.TestCase):
             1, [], tensors, [], [Delta(x, v), Delta(y, u)])
         ref = Expression([tr1, tr2])
         aref = AExpression(Ex=ref)
-        self.assertTrue(aout.pmatch(aref))
+        self.assertTrue(aout.permutation_matches(aref))
 
         op = P2("A", ["nm"])
         out = apply_wick(bra*op)
@@ -329,7 +329,7 @@ class ConvenienceTest(unittest.TestCase):
             1, [], tensors, [], [Delta(x, y), Delta(i, j), Delta(a, b)])
         ref = Expression([tr1])
         aref = AExpression(Ex=ref)
-        self.assertTrue(aout.pmatch(aref))
+        self.assertTrue(aout.permutation_matches(aref))
 
         op = EPS1("A", ["nm"], ["occ"], ["vir"])
         out = apply_wick(bra*op)
@@ -357,7 +357,7 @@ class ConvenienceTest(unittest.TestCase):
             1, [], tensors, [], [Delta(x, y), Delta(i, j)])
         ref = Expression([tr1])
         aref = AExpression(Ex=ref)
-        self.assertTrue(aout.pmatch(aref))
+        self.assertTrue(aout.permutation_matches(aref))
 
         op = EP1ip1("A", ["nm"], ["occ"])
         out = apply_wick(bra*op)
@@ -385,7 +385,7 @@ class ConvenienceTest(unittest.TestCase):
             1, [], tensors, [], [Delta(x, y), Delta(a, b)])
         ref = Expression([tr1])
         aref = AExpression(Ex=ref)
-        self.assertTrue(aout.pmatch(aref))
+        self.assertTrue(aout.permutation_matches(aref))
 
         op = EP1ea1("A", ["nm"], ["vir"])
         out = apply_wick(bra*op)
@@ -425,7 +425,7 @@ class ConvenienceTest(unittest.TestCase):
             scalar=1, sums=[],
             tensors=[Tensor([x], "Hq"), Tensor([x], "")])
         ref = AExpression(terms=[tr1])
-        self.assertTrue(ref.pmatch(out))
+        self.assertTrue(ref.permutation_matches(out))
 
         ket = ketP1("nm")
         ex = apply_wick(op*ket)
@@ -435,7 +435,7 @@ class ConvenienceTest(unittest.TestCase):
             scalar=1, sums=[],
             tensors=[Tensor([x], "Hp"), Tensor([x], "")])
         ref = AExpression(terms=[tr1])
-        self.assertTrue(ref.pmatch(out))
+        self.assertTrue(ref.permutation_matches(out))
 
     def testP2op(self):
         op = two_p("H")
@@ -452,7 +452,7 @@ class ConvenienceTest(unittest.TestCase):
             Tensor([x], ""), Tensor([x, y], "H", sym=sym), Tensor([y], "")]
         tr1 = ATerm(scalar=1, sums=[], tensors=tensors)
         ref = AExpression(terms=[tr1])
-        self.assertTrue(ref.pmatch(out))
+        self.assertTrue(ref.permutation_matches(out))
 
     def testEP11op(self):
         op = ep11("Hp", ["occ", "vir"], ["nm"], name2="Hq")
@@ -468,7 +468,7 @@ class ConvenienceTest(unittest.TestCase):
             scalar=1, sums=[],
             tensors=[Tensor([x, a, i], ""), Tensor([x, a, i], "Hq")])
         ref = AExpression(terms=[tr1])
-        self.assertTrue(ref.pmatch(out))
+        self.assertTrue(ref.permutation_matches(out))
 
         ket = ketP1E1("nm", "occ", "vir")
         ex = apply_wick(op*ket)
@@ -479,7 +479,7 @@ class ConvenienceTest(unittest.TestCase):
             scalar=1, sums=[],
             tensors=[Tensor([x, i, a], "Hp"), Tensor([x, i, a], "")])
         ref = AExpression(terms=[tr1])
-        self.assertTrue(ref.pmatch(out))
+        self.assertTrue(ref.permutation_matches(out))
 
 
 if __name__ == '__main__':

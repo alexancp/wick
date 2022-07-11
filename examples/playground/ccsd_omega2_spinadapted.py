@@ -23,7 +23,7 @@ T2 = E2_spin("t2", [("o_a", "v_a"), ("o_b", "v_b")], index_key=index_dict)
 T = T2
 
 doubles_projection = braE2_spin([("o_a", "v_a"), ("o_b", "v_b")], index_key=index_dict)
-print(doubles_projection)
+
 H = H1 + H2
 print("[H, T]")
 HT = commute(H, T)
@@ -32,15 +32,14 @@ HTT = commute(HT, T)
 
 Omega2 = doubles_projection*(H + HT + Fraction('1/2')*HTT)
 
-print("\nApply wick")
+print("Apply wick")
 out = apply_wick(Omega2)
 
-print("\nResolve")
+print("Resolve")
 out.resolve()
 
-print("\nOmega2 with explicit spin contributions:")
+print("Omega2 with explicit spin contributions:")
 explicit_spin = AExpression(Ex=out)
-print(explicit_spin)
 
 space_dict = {"o_a": "o", "o_b": "o", "v_a": "v", "v_b": "v"}
 
@@ -48,3 +47,6 @@ final = explicit_spin.update_index_spaces(space_dict)
 final.simplify()
 print("\nOmega2 spin-adapted expression:")
 print(final)
+
+print("\nIntroduce permutation operators:")
+print(final.introduce_permutation_operators((2, 3, 0, 1)))

@@ -1038,26 +1038,32 @@ def e_pqrs_operator(name, spin_spaces, norder=False, index_key=None):
 
     factor = Fraction(1, 2)
     for spin in spin_spaces:
+        print(f"Spin: {spin}")
         for p_space in spin:
+            print(f"p space: {p_space}")
             p = Idx(0, p_space)
             for q_space in spin:
+                print(f"q space: {q_space}")
                 i = 0 if q_space != p_space else 1
                 q = Idx(i, q_space)
 
                 for s_space in spin:
+                    print(f"s space: {s_space}")
                     # True == 1 and False == 0
                     i = sum([s_space == s for s in [p_space, q_space]])
                     s = Idx(i, s_space)
                     operators = [FOperator(p, True), FOperator(s, False)]
                     sigmas = [Sigma(p), Sigma(q), Sigma(s)]
                     tensors = [Tensor([p, q, q, s], name, sym=sym)]
-                    nsign = 1
+                    nsign = -1
                     if norder:
                         operators, nsign = normal_ordered(operators)
                     t = Term(
                         nsign*factor, sigmas, tensors,
                         operators, [], index_key=index_key)
                     one_e_part.append(t)
+    print(f"\nOne electron part of e_pqrs:")
+    print(f"{one_e_part}\n\n")
     return two_e_part + Expression(one_e_part)
 
 
@@ -1164,3 +1170,53 @@ def braE2_spin(spaces, index_key=None):
             terms.append(bra2)
 
     return Expression(terms)
+
+
+def bath_projector(ospace, vspace, sin, cos, index_key=None):
+    """
+    Return an expression representing all pieces of a one-electron operator
+
+    name (str): Name of the operator.
+    spaces (list): List orbital subspaces
+    norder (bool): Return only normal-ordered part?
+    """
+    terms = []
+    tensors = [[sin, sin], [cos, cos], [sin, cos], [sin, cos]]
+    factors = [1, 1, -1, -1]
+
+    dagger_indices = [Idx(0, ospace), Idx(0, vspace), Idx(0, ospace), Idx(0, vspace)]
+    indices = [Idx(0, ospace), Idx(0, vspace), Idx(0, vspace), Idx(0, ospace)]
+
+    for p, q, t, f in zip(dagger_indices, indices, tensors, factors):
+        operators = [FOperator(p, True), FOperator(q, False)]
+        sign = 1
+        term = Term(
+            sign*f, [], t, operators, [], index_key=index_key)
+        terms.append(term)
+
+    return Expression(terms)
+
+
+# def bath_projector(ospace, vspace, sin, cos, index_key=None):
+#     """
+#     Return an expression representing all pieces of a one-electron operator
+
+#     name (str): Name of the operator.
+#     spaces (list): List orbital subspaces
+#     norder (bool): Return only normal-ordered part?
+#     """
+#     terms = []
+#     factors = [sin*sin, cos*cos, -1*sin*cos, -1*sin*cos]
+#     print(factors)
+#     dagger_indices = [Idx(0, ospace), Idx(0, vspace), Idx(0, ospace), Idx(0, vspace)]
+#     indices = [Idx(0, ospace), Idx(0, vspace), Idx(0, vspace), Idx(0, ospace)]
+
+#     for p, q, f in zip(dagger_indices, indices, factors):
+#         operators = [FOperator(p, True), FOperator(q, False)]
+#         sign = 1
+#         t = Term(
+#             sign*f, [], [], operators, [], index_key=index_key)
+#         print(t)
+#         terms.append(t)
+
+#     return Expression(terms)

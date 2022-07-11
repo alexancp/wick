@@ -28,7 +28,7 @@ class SCRulesTest(unittest.TestCase):
             scalar=1, sums=[Sigma(i)],
             tensors=[Tensor([i, i], "f")])
         ref = AExpression(terms=[tr1])
-        self.assertTrue(ref.pmatch(out))
+        self.assertTrue(ref.permutation_matches(out))
 
     def test_0d2(self):
         # 0 differences 2-electron operator
@@ -44,7 +44,7 @@ class SCRulesTest(unittest.TestCase):
             scalar=Fraction(1, 2), sums=[Sigma(i), Sigma(j)],
             tensors=[Tensor([i, j, i, j], "I", sym=get_sym(True))])
         ref = AExpression(terms=[tr1])
-        self.assertTrue(ref.pmatch(out))
+        self.assertTrue(ref.permutation_matches(out))
 
     def test_1d0a(self):
         # 1 difference, constant
@@ -68,7 +68,7 @@ class SCRulesTest(unittest.TestCase):
             scalar=1, sums=[],
             tensors=[Tensor([i, a], "f"), Tensor([i, a], "")])
         ref = AExpression(terms=[tr1])
-        self.assertTrue(ref.pmatch(out))
+        self.assertTrue(ref.permutation_matches(out))
 
     def test_1d2a(self):
         # 1 difference, 2-electron operator
@@ -86,7 +86,7 @@ class SCRulesTest(unittest.TestCase):
             tensors=[Tensor([i, j, a, j], "I", sym=get_sym(True)),
                      Tensor([i, a], "")])
         ref = AExpression(terms=[tr1])
-        self.assertTrue(ref.pmatch(out))
+        self.assertTrue(ref.permutation_matches(out))
 
     def test_1d0b(self):
         # 1 difference, constant
@@ -110,7 +110,7 @@ class SCRulesTest(unittest.TestCase):
             scalar=1, sums=[],
             tensors=[Tensor([a, i], ""), Tensor([a, i], "f")])
         ref = AExpression(terms=[tr1])
-        self.assertTrue(ref.pmatch(out))
+        self.assertTrue(ref.permutation_matches(out))
 
     def test_1d2b(self):
         # 1 difference, 2-electron operator (compressed)
@@ -128,7 +128,7 @@ class SCRulesTest(unittest.TestCase):
             tensors=[Tensor([a, i], ""),
                      Tensor([a, j, i, j], "I", sym=get_sym(True))])
         ref = AExpression(terms=[tr1])
-        self.assertTrue(ref.pmatch(out))
+        self.assertTrue(ref.permutation_matches(out))
 
     def test_2d1a(self):
         # 2 differences, 1-electron operator
@@ -154,7 +154,7 @@ class SCRulesTest(unittest.TestCase):
             tensors=[Tensor([i, j, a, b], "I", sym=get_sym(True)),
                      Tensor([i, j, a, b], "", sym=get_sym(True))])
         ref = AExpression(terms=[tr1])
-        self.assertTrue(ref.pmatch(out))
+        self.assertTrue(ref.permutation_matches(out))
 
     def test_2d1b(self):
         # 2 differences, 1-electron operator
@@ -180,7 +180,7 @@ class SCRulesTest(unittest.TestCase):
             tensors=[Tensor([a, b, i, j], "", sym=get_sym(True)),
                      Tensor([a, b, i, j], "I", sym=get_sym(True))])
         ref = AExpression(terms=[tr1])
-        self.assertTrue(ref.pmatch(out))
+        self.assertTrue(ref.permutation_matches(out))
 
     def test_2d1c(self):
         # 2 differences, 1-electron operator
@@ -212,7 +212,7 @@ class SCRulesTest(unittest.TestCase):
                      Tensor([a, j, i, b], "I", sym=get_sym(True)),
                      Tensor([j, b], "")])
         ref = AExpression(terms=[tr1])
-        self.assertTrue(ref.pmatch(out))
+        self.assertTrue(ref.permutation_matches(out))
 
 
 if __name__ == '__main__':

@@ -1,5 +1,6 @@
 # Copyright (c) 2020-2021 Alec White
 # Licensed under the MIT License (see LICENSE for details)
+from operator import index
 from .index import Idx
 from .index import idx_copy
 from .index import is_occupied
@@ -269,6 +270,18 @@ class Tensor(object):
                 indices.append(idx_copy(self.indices[i]))
         return Tensor(indices, self.name, self.sym)
 
+    def update_indices(self, index_dict):
+        """
+        Return new Tensor with updated indices according to index_dict
+        """
+        indices = []
+        for index in self.indices:
+            if index in index_dict:
+                indices.append(idx_copy(index_dict[index]))
+            else:
+                indices.append(idx_copy(index))
+        return Tensor(indices, self.name, self.sym)
+
 def permute(t, p):
     name = str(t.name)
     indices = [t.indices[i] for i in p]
@@ -327,6 +340,17 @@ class Sigma(object):
             if self.idx == index:
                 new_index = idx_copy(new_indices[i])
                 break
+        else:
+            new_index = idx_copy(self.idx)
+        return Sigma(new_index)
+
+
+    def update_index(self, index_dict):
+        """
+        Return new Sigma with updated index according to index_dict
+        """
+        if self.idx in index_dict:
+            new_index = idx_copy(index_dict[self.idx])
         else:
             new_index = idx_copy(self.idx)
         return Sigma(new_index)

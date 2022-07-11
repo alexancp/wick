@@ -57,6 +57,9 @@ def idx_copy(idx):
 
 
 def is_occupied(idx, occ=None):
+    """
+    occ: list of possible occupied index spaces
+    """
     if occ is None:
         return 'o' in idx.space
     else:

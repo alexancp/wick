@@ -88,7 +88,7 @@ class WickTest(unittest.TestCase):
         out1 = apply_wick(O1*P*O2)
         out1.resolve()
         out = AExpression(Ex=out1)
-        self.assertTrue(ref.pmatch(out))
+        self.assertTrue(ref.permutation_matches(out))
 
 
 if __name__ == '__main__':

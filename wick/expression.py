@@ -517,7 +517,7 @@ class ATerm(object):
         else:
             return NotImplemented
 
-    def pmatch(self, other):
+    def permutation_matches(self, other):
         if isinstance(other, ATerm):
             tlists = [t.sym.tlist for t in other.tensors]
             if len(other.tensors) != len(self.tensors):
@@ -677,6 +677,13 @@ class ATerm(object):
             scalar=self.scalar, sums=new_sums,
             tensors=new_tensors, index_key=self.index_key)
 
+    def get_permuted_term(self, index_dict):
+        new_sums = [t.update_index(index_dict) for t in self.sums]
+        new_tensors = [self.tensors[0]]
+        new_tensors.extend([t.update_indices(index_dict) for t in self.tensors[1:]])
+        new_term = ATerm(self.scalar, new_sums, new_tensors, index_key=self.index_key)
+        return new_term
+
 
 class Expression(object):
     """Operator expression
@@ -796,7 +803,7 @@ class AExpression(object):
             t1 = self.terms[0]
             remaining = self.terms[1:]
             tm = list(filter(
-                test, [(t, t1.pmatch(t), i) for i, t in enumerate(remaining)]))
+                test, [(t, t1.permutation_matches(t), i) for i, t in enumerate(remaining)]))
             s = t1.scalar
             for t in tm:
                 s += t[1]*t[0].scalar
@@ -890,14 +897,14 @@ class AExpression(object):
         newterms = [t for t in self.terms if t.connected()]
         return AExpression(terms=newterms, simplify=simplify)
 
-    def pmatch(self, other):
+    def permutation_matches(self, other):
         if isinstance(other, AExpression):
             if len(self.terms) != len(other.terms):
                 return False
             for t1 in self.terms:
                 matched = False
                 for t2 in other.terms:
-                    if t2.pmatch(t1):
+                    if t2.permutation_matches(t1):
                         matched = True
                         break
                 if not matched:
@@ -917,3 +924,44 @@ class AExpression(object):
         """
         terms = [t.update_index_spaces(space_dict) for t in self.terms]
         return AExpression(terms=terms, simplify=False)
+
+    def introduce_permutation_operators(self, permutation):
+        """
+        For each term make another term according to the given
+        permutation of the external indices and check if we can introduce
+        a permutation operator.
+        """
+        from wick.index import idx_copy
+        new_terms = []
+        matched_terms = [False for t in self.terms]
+        for i, t1 in enumerate(self.terms):
+            t1.merge_external()
+            index_dict = {
+                t1.tensors[0].indices[j] :
+                t1.tensors[0].indices[p]
+                for j, p in enumerate(permutation)
+            }
+            permuted = t1.get_permuted_term(index_dict)
+            for j, t2 in enumerate(self.terms):
+                if i == j or matched_terms[j]: continue
+                if permuted.permutation_matches(t2):
+                    external_indices = [idx_copy(i) for i in permuted.tensors[0].indices]
+                    P = Tensor(external_indices, "P")
+                    if t1.scalar <= t2.scalar:
+                        t1_scalar = t1.scalar
+                        t2_scalar = t2.scalar - t1.scalar
+                        new_terms.append(ATerm(t1_scalar, t1.sums, [P, *t1.tensors], t1.index_key))
+                        new_terms.append(ATerm(t2_scalar, t2.sums, t2.tensors, t2.index_key))
+                    else:
+                        t1_scalar = t1.scalar - t2.scalar
+                        t2_scalar = t2.scalar
+                        new_terms.append(ATerm(t1_scalar, t1.sums, t1.tensors, t1.index_key))
+                        new_terms.append(ATerm(t2_scalar, t2.sums, [P, *t2.tensors], t2.index_key))
+                    matched_terms[i] = True
+                    matched_terms[j] = True
+                    break
+            if not matched_terms[i]:
+                new_terms.append(t1)
+
+        new_terms = list(filter(lambda x: abs(x.scalar) > self.tthresh, new_terms))
+        return AExpression(new_terms, simplify=False)
