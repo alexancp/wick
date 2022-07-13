@@ -1,0 +1,8 @@
+Omega1 spin-adapted expression:
+ + 1.0F_{ai}
+ + 2.0\sum_{jb}F_{jb}t2_{aibj}
+ - 1.0\sum_{jb}F_{jb}t2_{ajbi}
+ - 2.0\sum_{jkb}g_{jikb}t2_{ajbk}
+ + 1.0\sum_{jkb}g_{jikb}t2_{akbj}
+ + 2.0\sum_{jbc}g_{jbac}t2_{bjci}
+ - 1.0\sum_{jbc}g_{jbac}t2_{cjbi}
