@@ -1184,8 +1184,8 @@ def bath_projector(ospace, vspace, sin, cos, index_key=None):
     tensors = [[sin, sin], [cos, cos], [sin, cos], [sin, cos]]
     factors = [1, 1, -1, -1]
 
-    dagger_indices = [Idx(0, ospace), Idx(0, vspace), Idx(0, ospace), Idx(0, vspace)]
-    indices = [Idx(0, ospace), Idx(0, vspace), Idx(0, vspace), Idx(0, ospace)]
+    dagger_indices = [Idx(0, ospace),Idx(0, vspace),Idx(0, ospace),Idx(0, vspace),]
+    indices = [Idx(0, ospace), Idx(0, vspace), Idx(0, vspace), Idx(0, ospace),]
 
     for p, q, t, f in zip(dagger_indices, indices, tensors, factors):
         operators = [FOperator(p, True), FOperator(q, False)]
