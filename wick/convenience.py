@@ -1026,48 +1026,6 @@ def two_e_spin(name, spin_spaces, norder=False, index_key=None):
     return Expression(terms)
 
 
-def e_pqrs_operator(name, spin_spaces, norder=False, index_key=None):
-    """
-    Make symmetric 2 electron operator p,q,r,s where p,q need to have the same spin and r,s as well
-    spin_spaces: list of tuples, where each tuple is the space for a given spin
-    """
-    two_e_part = two_e_spin(name, spin_spaces, norder, index_key)
-
-    one_e_part = []
-    sym = TensorSym([(0, 1, 2, 3), (2, 3, 0, 1)], [1, 1])
-
-    factor = Fraction(1, 2)
-    for spin in spin_spaces:
-        print(f"Spin: {spin}")
-        for p_space in spin:
-            print(f"p space: {p_space}")
-            p = Idx(0, p_space)
-            for q_space in spin:
-                print(f"q space: {q_space}")
-                i = 0 if q_space != p_space else 1
-                q = Idx(i, q_space)
-
-                for s_space in spin:
-                    print(f"s space: {s_space}")
-                    # True == 1 and False == 0
-                    i = sum([s_space == s for s in [p_space, q_space]])
-                    s = Idx(i, s_space)
-                    operators = [FOperator(p, True), FOperator(s, False)]
-                    sigmas = [Sigma(p), Sigma(q), Sigma(s)]
-                    tensors = [Tensor([p, q, q, s], name, sym=sym)]
-                    nsign = -1
-                    if norder:
-                        operators, nsign = normal_ordered(operators)
-                    t = Term(
-                        nsign*factor, sigmas, tensors,
-                        operators, [], index_key=index_key)
-                    one_e_part.append(t)
-    print(f"\nOne electron part of e_pqrs:")
-    print(f"{one_e_part}\n\n")
-    return two_e_part + Expression(one_e_part)
-
-
-
 def E1_spin(name, ospaces, vspaces, index_key=None):
     """
     Return the tensor representation of a Fermion excitation operator
@@ -1197,26 +1155,79 @@ def bath_projector(ospace, vspace, sin, cos, index_key=None):
     return Expression(terms)
 
 
-# def bath_projector(ospace, vspace, sin, cos, index_key=None):
-#     """
-#     Return an expression representing all pieces of a one-electron operator
+def bath_projector(ospace, vspace, sin, cos, suffix="", index_key=None):
+    """
+    Return an expression representing all pieces of a one-electron operator
 
-#     name (str): Name of the operator.
-#     spaces (list): List orbital subspaces
-#     norder (bool): Return only normal-ordered part?
-#     """
-#     terms = []
-#     factors = [sin*sin, cos*cos, -1*sin*cos, -1*sin*cos]
-#     print(factors)
-#     dagger_indices = [Idx(0, ospace), Idx(0, vspace), Idx(0, ospace), Idx(0, vspace)]
-#     indices = [Idx(0, ospace), Idx(0, vspace), Idx(0, vspace), Idx(0, ospace)]
+    name (str): Name of the operator.
+    spaces (list): List orbital subspaces
+    norder (bool): Return only normal-ordered part?
+    """
+    from wick.index import NamedIndex
+    terms = []
+    tensors = [[sin, sin], [cos, cos], [sin, cos], [sin, cos]]
+    factors = [1, 1, -1, -1]
 
-#     for p, q, f in zip(dagger_indices, indices, factors):
-#         operators = [FOperator(p, True), FOperator(q, False)]
-#         sign = 1
-#         t = Term(
-#             sign*f, [], [], operators, [], index_key=index_key)
-#         print(t)
-#         terms.append(t)
+    dagger_indices = [
+        NamedIndex(0, ospace, f"I{suffix}"),
+        NamedIndex(0, vspace, f"A{suffix}"),
+        NamedIndex(0, ospace, f"I{suffix}"),
+        NamedIndex(0, vspace, f"A{suffix}"),
+    ]
+    indices = [
+        NamedIndex(0, ospace, f"I{suffix}"),
+        NamedIndex(0, vspace, f"A{suffix}"),
+        NamedIndex(0, vspace, f"A{suffix}"),
+        NamedIndex(0, ospace, f"I{suffix}"),
+    ]
 
-#     return Expression(terms)
+    for p, q, t, f in zip(dagger_indices, indices, tensors, factors):
+        operators = [FOperator(p, True), FOperator(q, False)]
+        term = Term(f, [], t, operators, [], index_key=index_key)
+        terms.append(term)
+
+    return Expression(terms)
+
+
+def get_g_oovo(name, ospaces, vspaces, index_key=None):
+    terms = []
+    sym = TensorSym([(0, 1, 2, 3), (2, 3, 0, 1)], [1, 1])
+    factor = Fraction(1, 2)
+    for pq_space in ospaces:
+        p = Idx(0, pq_space)
+        q = Idx(1, pq_space)
+        for s_space, r_space in zip(ospaces, vspaces):
+            r = Idx(0, r_space)
+            s = Idx(2, s_space)
+
+            operators = [
+                FOperator(p, True), FOperator(r, True),
+                FOperator(s, False), FOperator(q, False),
+            ]
+            sigmas = [Sigma(p), Sigma(q), Sigma(r), Sigma(s)]
+            tensors = [Tensor([p, q, r, s], name, sym=sym)]
+            t = Term(
+                factor, sigmas, tensors,
+                operators, [], index_key=index_key,
+            )
+            terms.append(t)
+    for q_space, p_space in zip(ospaces, vspaces):
+        p = Idx(0, p_space)
+        q = Idx(0, q_space)
+        for rs_space in ospaces:
+            r = Idx(1, rs_space)
+            s = Idx(2, rs_space)
+
+            operators = [
+                FOperator(p, True), FOperator(r, True),
+                FOperator(s, False), FOperator(q, False),
+            ]
+            sigmas = [Sigma(p), Sigma(q), Sigma(r), Sigma(s)]
+            tensors = [Tensor([p, q, r, s], name, sym=sym)]
+            t = Term(
+                factor, sigmas, tensors,
+                operators, [], index_key=index_key,
+            )
+            terms.append(t)
+
+    return Expression(terms)

@@ -21,11 +21,11 @@ class Idx(object):
         return str(self.index) + "(" + self.space + ")"
 
     def __hash__(self):
-        return hash(str(self))
+        """Used by e.g. set.intersection"""
+        return hash(f"{self.index}({self.space})")
 
     def __eq__(self, other):
-        return self.index == other.index\
-            and self.space == other.space
+        return self.index == other.index and self.space == other.space
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -53,6 +53,8 @@ def idx_copy(idx):
     Copy an index by making a deep copy of the index (int) and
     fermion (bool) variables and copying the reference to the space.
     """
+    if isinstance(idx, NamedIndex):
+        return NamedIndex(copy(idx.index), idx.space, copy(idx.name), bool(idx.fermion))
     return Idx(copy(idx.index), idx.space, bool(idx.fermion))
 
 
@@ -64,3 +66,20 @@ def is_occupied(idx, occ=None):
         return 'o' in idx.space
     else:
         return idx.space in occ
+
+
+class NamedIndex(Idx):
+    """
+    Named index class
+
+    Attributes:
+        index (int): Integer labelling an index as unique
+        space (str): Name of the index space
+        fermion (bool): Index of fermiond space?
+        name (str): Name of the symbol
+    """
+    def __init__(self, index, space, name, fermion=True):
+        self.index = index
+        self.space = space
+        self.name = name
+        self.fermion = fermion

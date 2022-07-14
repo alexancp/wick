@@ -1,7 +1,7 @@
 # Copyright (c) 2020-2021 Alec White
 # Licensed under the MIT License (see LICENSE for details)
 from operator import index
-from .index import Idx
+from .index import Idx, NamedIndex
 from .index import idx_copy
 from .index import is_occupied
 
@@ -66,13 +66,18 @@ class FOperator(object):
 
     def _inc(self, i):
         """Increment indices"""
+        if isinstance(self.idx, NamedIndex):
+            return  FOperator(NamedIndex(self.idx.index + i, self.idx.space, self.idx.name), self.ca)
         return FOperator(Idx(self.idx.index + i, self.idx.space), self.ca)
 
     def _print_str(self, imap):
+        index_str = imap[self.idx]
+        if isinstance(self.idx, NamedIndex):
+            index_str = self.idx.name
         if self.ca:
-            return "a^{\\dagger}_" + imap[self.idx]
+            return "a^{\\dagger}_" + index_str
         else:
-            return "a_" + imap[self.idx]
+            return "a_" + index_str
 
     def qp_creation(self, occ=None):
         if (not is_occupied(self.idx, occ=occ)) and self.ca:
@@ -123,14 +128,19 @@ class BOperator(object):
 
     def _inc(self, i):
         """Increment indices"""
+        if isinstance(self.idx, NamedIndex):
+            return  BOperator(NamedIndex(self.idx.index + i, self.idx.space, self.idx.name, fermion=False), self.ca)
         return BOperator(
             Idx(self.idx.index + i, self.idx.space, fermion=False), self.ca)
 
     def _print_str(self, imap):
+        index_str = imap[self.idx]
+        if isinstance(self.idx, NamedIndex):
+            index_str = self.idx.name
         if self.ca:
-            return "b^{\\dagger}_" + imap[self.idx]
+            return "b^{\\dagger}_" + index_str
         else:
-            return "b_" + imap[self.idx]
+            return "b_" + index_str
 
     def qp_creation(self):
         return self.ca
@@ -223,7 +233,12 @@ class Tensor(object):
         return self.name + "_{" + istr + "}"
 
     def _inc(self, i):
-        indices = [Idx(ii.index + i, ii.space) for ii in self.indices]
+        indices = []
+        for ii in self.indices:
+            if isinstance(ii, NamedIndex):
+                indices.append(FOperator(NamedIndex(ii.index + i, ii.space, ii.name), self.ca))
+            else:
+                indices.append(Idx(ii.index + i, ii.space))
         return Tensor(indices, self.name, sym=self.sym)
 
     def ilist(self):
@@ -236,7 +251,10 @@ class Tensor(object):
     def _istr(self, imap):
         out = str()
         for idx in self.indices:
-            out += imap[idx]
+            if isinstance(idx, NamedIndex):
+                out += idx.name
+            else:
+                out += imap[idx]
         return out
 
     def _print_str(self, imap):
@@ -245,7 +263,10 @@ class Tensor(object):
             return str()
         istr = str()
         for idx in self.indices:
-            istr += imap[idx]
+            if isinstance(idx, NamedIndex):
+                istr += idx.name
+            else:
+                istr += imap[idx]
         return self.name + "_{" + istr + "}"
 
     def transpose(self, perm):
@@ -327,10 +348,15 @@ class Sigma(object):
         return "\\sum_{" + str(self.idx.index) + "}"
 
     def _inc(self, i):
+        if isinstance(i, NamedIndex):
+            return Sigma(NamedIndex(self.idx.index + i, self.idx.space, self.index.name))
         return Sigma(Idx(self.idx.index + i, self.idx.space))
 
     def _print_str(self, imap):
-        return "\\sum_{" + imap[self.idx] + "}"
+        index_str = imap[self.idx]
+        if isinstance(self.idx, NamedIndex):
+            index_str = self.idx.name
+        return "\\sum_{" + index_str + "}"
 
     def copy(self):
         return Sigma(idx_copy(self.idx))
@@ -366,6 +392,10 @@ class Delta(object):
     """
     def __init__(self, i1, i2):
         assert i1.space == i2.space
+        # if isinstance(i2, NamedIndex):
+        #     self.i1 = i2
+        #     self.i2 = i1
+        #     return
         self.i1 = i1
         self.i2 = i2
 
@@ -387,18 +417,41 @@ class Delta(object):
         return "\\delta_{" + istr + "}"
 
     def _inc(self, i):
-        return Delta(
-            Idx(self.i1.index + i, self.i1.space),
-            Idx(self.i2.index + i, self.i2.space))
+        if isinstance(self.i1, NamedIndex):
+            i1 = NamedIndex(self.i1.index + i, self.i1.space, self.i1.name)
+        else:
+            i1 = Idx(self.i1.index + i, self.i1.space)
+        if isinstance(self.i2, NamedIndex):
+            i2 = NamedIndex(self.i2.index + i, self.i2.space, self.i2.name)
+        else:
+            i2 = Idx(self.i2.index + i, self.i2.space)
+        return Delta(i1, i2)
 
     def _print_str(self, imap):
-        return "\\delta_{" + imap[self.i1] + imap[self.i2] + "}"
+        i1_str = imap[self.i1]
+        i2_str = imap[self.i2]
+        if isinstance(self.i1, NamedIndex):
+            i1_str = self.i1.name
+        if isinstance(self.i2, NamedIndex):
+            i2_str = self.i2.name
+        return "\\delta_{" + f"{i1_str}{i2_str}" + "}"
 
     def copy(self):
         i1 = idx_copy(self.i1)
         i2 = idx_copy(self.i2)
         return Delta(i1, i2)
 
+    def replace_index1(self, index):
+        self.i1 = replace_index(self.i1, index)
+
+    def replace_index2(self, index):
+        self.i2 = replace_index(self.i2, index)
+
+def replace_index(index1, index2):
+    if isinstance(index1, NamedIndex) and not isinstance(index2, NamedIndex):
+        return NamedIndex(index2.index, index2.space,
+                          index1.name, bool(index2.fermion))
+    return index2
 
 def tensor_from_delta(d):
     sym = TensorSym([(0, 1), (1, 0)], [1, 1])

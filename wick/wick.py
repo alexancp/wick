@@ -27,6 +27,10 @@ def valid_contraction(o1, o2, occ=None):
 
 
 def pair_list(lst, occ=None):
+    """
+    For a given list of operators makes a list of lists
+    that contain the operator pairs to be contracted.
+    """
     n = len(lst)
     assert n % 2 == 0
     if n < 2:
@@ -73,6 +77,11 @@ def get_sign(ipairs):
 
 
 def split_operators(ops):
+    """
+    Make a list of lists of operators
+    If there are no projectors onto the vaccum the result is
+    a list with the list of operators as element.
+    """
     ps = []
     for i, op in enumerate(ops):
         if isinstance(op, Projector):

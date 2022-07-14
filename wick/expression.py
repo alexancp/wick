@@ -4,7 +4,7 @@ from copy import copy
 from itertools import product
 from numbers import Number
 from .operator import Sigma, Tensor, permute, tensor_from_delta
-
+from .index import NamedIndex, Idx, idx_copy
 
 class TermMap(object):
     """Map indicating the contraction pattern of a given tensor expression
@@ -49,6 +49,7 @@ default_index_key = {"occ": "ijklmnop", "vir": "abcdefgh", "nm": "IJKLMNOP"}
 
 
 def _resolve(sums, tensors, operators, deltas):
+    from wick.operator import replace_index
     newdel = [d.copy() for d in deltas]
     newsums = [s.copy() for s in sums]
     newtens = [t.copy() for t in tensors]
@@ -96,10 +97,10 @@ def _resolve(sums, tensors, operators, deltas):
             del newsums[dindx]
         else:
             assert case == 0
-
+        # Update other deltas
         for i, (ddd, ccc) in enumerate(zip(newdel, cases)):
             if case == 1 and ddd.i1 == i1:
-                newdel[i].i1 = i2
+                newdel[i].replace_index1(i2)
                 if ccc == 3:
                     cases[i] = 2
                 elif ccc == 1:
@@ -107,7 +108,7 @@ def _resolve(sums, tensors, operators, deltas):
                 else:
                     assert False
             elif case == 1 and ddd.i2 == i1:
-                newdel[i].i2 = i2
+                newdel[i].replace_index2(i2)
                 if ccc == 3:
                     cases[i] = 1
                 elif ccc == 2:
@@ -115,7 +116,7 @@ def _resolve(sums, tensors, operators, deltas):
                 else:
                     assert False
             elif case == 2 and ddd.i2 == i2:
-                newdel[i].i2 = i1
+                newdel[i].replace_index2(i1)
                 if ccc == 3:
                     cases[i] = 1
                 elif ccc == 2:
@@ -123,7 +124,7 @@ def _resolve(sums, tensors, operators, deltas):
                 else:
                     assert False
             elif case == 2 and ddd.i1 == i2:
-                newdel[i].i1 = i1
+                newdel[i].replace_index1(i1)
                 if ccc == 3:
                     cases[i] = 2
                 elif ccc == 1:
@@ -135,18 +136,19 @@ def _resolve(sums, tensors, operators, deltas):
             for k, _ in enumerate(tt.indices):
                 if case == 1:
                     if tt.indices[k] == i1:
-                        tt.indices[k] = i2
+                        tt.indices[k] = replace_index(tt.indices[k], i2)
                 elif case == 2:
                     if tt.indices[k] == i2:
-                        tt.indices[k] = i1
+                        tt.indices[k] = replace_index(tt.indices[k], i1)
 
         for oo in newops:
             if case == 1:
                 if oo.idx == i1:
-                    oo.idx = i2
+                    # Cannot overwrite index from within the routine?
+                    oo.idx = replace_index(oo.idx, i2)
             elif case == 2:
                 if oo.idx == i2:
-                    oo.idx = i1
+                    oo.idx = replace_index(oo.idx, i1)
 
         if not (case == 0 and i1 != i2):
             rs.append(dd)
@@ -180,11 +182,11 @@ def _resolve(sums, tensors, operators, deltas):
         for tt in newtens:
             for k, _ in enumerate(tt.indices):
                 if tt.indices[k] == i2:
-                    tt.indices[k] = i1
+                    tt.indices[k] = replace_index(tt.indices[k], i1)
 
         for oo in newops:
             if oo.idx == i2:
-                oo.idx = i1
+                oo.idx = replace_index(oo.idx, i1)
 
         rs.append(dd)
 
@@ -488,7 +490,10 @@ class ATerm(object):
         out = str(float(self.scalar)) if with_scalar else str()
         iis = str()
         for ss in self.sums:
-            iis += imap[ss.idx]
+            if isinstance(ss.idx, NamedIndex):
+                iis += ss.idx.name
+            else:
+                iis += imap[ss.idx]
         if iis:
             out += "\\sum_{" + iis + "}"
         for tt in self.tensors:
@@ -519,11 +524,11 @@ class ATerm(object):
 
     def permutation_matches(self, other):
         if isinstance(other, ATerm):
-            tlists = [t.sym.tlist for t in other.tensors]
             if len(other.tensors) != len(self.tensors):
                 return None
             if len(self.sums) != len(other.sums):
                 return None
+            tlists = [t.sym.tlist for t in other.tensors]
             TM1 = TermMap(self.sums, self.tensors)
             for xs in product(*tlists):
                 sign = 1
@@ -653,7 +658,6 @@ class ATerm(object):
             tensors=newtensors, index_key=self.index_key)
 
     def update_index_spaces(self, new_spaces):
-        from wick.index import Idx, idx_copy
         """
         Update index spaces according to the dictionary new_spaces.
         new_spaces (dict): key: name of old space, value: name of new space
@@ -665,7 +669,10 @@ class ATerm(object):
         for index in old_indices:
             if index.space in new_spaces:
                 new_space = new_spaces[index.space]
-                new_indices.append(Idx(counters[new_space], new_space))
+                if isinstance(index, NamedIndex):
+                    new_indices.append(NamedIndex(counters[new_space], new_space, index.name))
+                else:
+                    new_indices.append(Idx(counters[new_space], new_space))
                 counters[new_space] += 1
             else:
                 new_indices.append(idx_copy(index))
@@ -678,7 +685,7 @@ class ATerm(object):
             tensors=new_tensors, index_key=self.index_key)
 
     def get_permuted_term(self, index_dict):
-        new_sums = [t.update_index(index_dict) for t in self.sums]
+        new_sums = [s.update_index(index_dict) for s in self.sums]
         new_tensors = [self.tensors[0]]
         new_tensors.extend([t.update_indices(index_dict) for t in self.tensors[1:]])
         new_term = ATerm(self.scalar, new_sums, new_tensors, index_key=self.index_key)
@@ -754,9 +761,9 @@ class Expression(object):
         out = str()
         for t in self.terms:
             sca = t.scalar
-            num = abs(sca)
+            num = str(abs(sca)) if abs(sca) != 1 else ""
             sign = " + " if sca > 0 else " - "
-            out += sign + str(num) + t._print_str(with_scalar=False) + "\n"
+            out += f"{sign}{num}{t._print_str(with_scalar=False)}\n"
         return out[:-1]
 
     def are_operators(self):
@@ -863,12 +870,13 @@ class AExpression(object):
         return not self.__eq__(other)
 
     def _print_str(self):
+        from fractions import Fraction
         out = str()
         for t in self.terms:
             sca = t.scalar
-            num = float(abs(sca))
+            num = float(abs(sca)) if abs(sca) != 1 else ""
             sign = " + " if sca > 0 else " - "
-            out += sign + str(num) + t._print_str(with_scalar=False) + "\n"
+            out += f"{sign}{num}{t._print_str(with_scalar=False)}\n"
         return out[:-1]
 
     def _print_einsum(self, lhs=None):
