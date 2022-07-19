@@ -681,14 +681,57 @@ class ATerm(object):
         new_sums = [s.update_index_spaces(old_indices, new_indices) for s in self.sums]
 
         return ATerm(
-            scalar=self.scalar, sums=new_sums,
-            tensors=new_tensors, index_key=self.index_key)
+                    scalar=self.scalar, sums=new_sums,
+                    tensors=new_tensors, index_key=self.index_key,
+               )
 
-    def get_permuted_term(self, index_dict):
+    # def cleanup_indices(self):
+    #     ilist = self.ilist()
+    #     off = {}
+    #     imap = {}
+    #     for idx in ilist:
+    #         s = idx.space
+    #         if s in off:
+    #             o = off[s]
+    #             off[s] += 1
+    #         else:
+    #             o = 0
+    #             off[s] = 1
+    #         imap[idx] = o
+
+    #     new_tensors = [t.cleanup_indices(imap) for t in self.tensors]
+    #     new_sums = [s.cleanup_indices(imap) for s in self.sums]
+
+    #     return ATerm(
+    #         scalar=self.scalar, sums=new_sums,
+    #         tensors=new_tensors, index_key=self.index_key)
+
+
+
+    def replace_indices(self, index_dict):
         new_sums = [s.update_index(index_dict) for s in self.sums]
         new_tensors = [self.tensors[0]]
         new_tensors.extend([t.update_indices(index_dict) for t in self.tensors[1:]])
         new_term = ATerm(self.scalar, new_sums, new_tensors, index_key=self.index_key)
+        return new_term
+
+    def replace_tensor(self, old, new):
+        tensors = []
+        imap = self._idx_map()
+        for t in self.tensors:
+            if t.name != old.name:
+                tensors.append(t.copy())
+                continue
+            for sign, permutation in zip(t.sym.signs, t.sym.plist):
+                if sign != 1: continue
+                permuted = permute(t, permutation)
+                if permuted == old:
+                    tensors.append(new.copy())
+                    break
+            else:
+                tensors.append(t.copy())
+
+        new_term = ATerm(self.scalar, self.sums, tensors, index_key=self.index_key)
         return new_term
 
 
@@ -927,11 +970,11 @@ class AExpression(object):
 
     def update_index_spaces(self, space_dict):
         """
-        Update index spaces according to the dictionary new_spaces.
-        new_spaces (dict): key: name of old space, value: name of new space
+        Update index spaces according to the dictionary space_dict.
+        space_dict (dict): key: name of old space, value: name of new space
         """
         terms = [t.update_index_spaces(space_dict) for t in self.terms]
-        return AExpression(terms=terms, simplify=False)
+        return AExpression(terms=terms)
 
     def introduce_permutation_operators(self, permutation):
         """
@@ -939,17 +982,17 @@ class AExpression(object):
         permutation of the external indices and check if we can introduce
         a permutation operator.
         """
-        from wick.index import idx_copy
         new_terms = []
         matched_terms = [False for t in self.terms]
         for i, t1 in enumerate(self.terms):
+            if (matched_terms[i]): continue
             t1.merge_external()
             index_dict = {
                 t1.tensors[0].indices[j] :
                 t1.tensors[0].indices[p]
                 for j, p in enumerate(permutation)
             }
-            permuted = t1.get_permuted_term(index_dict)
+            permuted = t1.replace_indices(index_dict)
             for j, t2 in enumerate(self.terms):
                 if i == j or matched_terms[j]: continue
                 if permuted.permutation_matches(t2):
@@ -973,3 +1016,65 @@ class AExpression(object):
 
         new_terms = list(filter(lambda x: abs(x.scalar) > self.tthresh, new_terms))
         return AExpression(new_terms, simplify=False)
+
+    def introduce_Coulomb_minus_Exchange(self, tensor_name, permutation, new_name):
+        from fractions import Fraction
+        new_terms = []
+        matched_terms = [False for t in self.terms]
+        redo = False
+
+        def get_new_terms(larger_term, smaller_term, new_term):
+            new_terms = []
+            if abs(larger_term.scalar / smaller_term.scalar) == 2:
+                new_term = new_term*Fraction(1, 2)
+                new_terms.append(new_term)
+            elif abs(larger_term.scalar / smaller_term.scalar) > 2:
+                new_term.scalar = -smaller_term.scalar
+                new_terms.append(new_term)
+                remaining_term = larger_term.copy()
+                remaining_term.scalar -= 2*new_term.scalar
+                new_terms.append(remaining_term)
+            elif abs(larger_term.scalar / smaller_term.scalar) < 2:
+                new_term.scalar *= Fraction(1, 2)
+                new_terms.append(new_term)
+                remaining_term = smaller_term.copy()
+                remaining_term.scalar += new_term.scalar
+                new_terms.append(remaining_term)
+            return new_terms
+
+        for i, t1 in enumerate(self.terms):
+            if (matched_terms[i]): continue
+            for tensor in t1.tensors:
+                if tensor.name != tensor_name: continue
+                permuted_tensor = permute(tensor, permutation)
+                permuted_term = t1.replace_tensor(tensor, permuted_tensor)
+                for j, t2 in enumerate(self.terms):
+                    if i == j or matched_terms[j]: continue
+                    if t1.scalar*t2.scalar > 0: continue # Coulomb and Exchange term have different signs
+                    if permuted_term.permutation_matches(t2): # matches without scalar
+                        if abs(t1.scalar) < abs(t2.scalar):
+                            new_tensor = permuted_tensor.copy()
+                            new_tensor.name = new_name
+                            # Might not find tensor in t2 due to different indices, so we use t1 to construct the new term
+                            new_term = t1.replace_tensor(tensor, new_tensor)
+                            new_term.scalar = t2.scalar
+                            new_terms += get_new_terms(t2, t1, new_term)
+                        else: # t1 > t2
+                            new_tensor = tensor.copy()
+                            new_tensor.name = new_name
+                            new_term = t1.replace_tensor(tensor, new_tensor)
+                            new_terms += get_new_terms(t1, t2, new_term)
+                        matched_terms[i] = True
+                        matched_terms[j] = True
+                        break
+            if not matched_terms[i]:
+                new_terms.append(t1)
+        new_terms = list(filter(lambda x: abs(x.scalar) > self.tthresh, new_terms))
+        if redo:
+            return self.introduce_Coulomb_minus_Exchange(tensor_name, permutation)
+        return AExpression(new_terms)
+
+
+    # def cleanup_indices(self):
+    #     terms = [t.cleanup_indices() for t in self.terms]
+    #     return AExpression(terms=terms)

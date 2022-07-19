@@ -303,6 +303,17 @@ class Tensor(object):
                 indices.append(idx_copy(index))
         return Tensor(indices, self.name, self.sym)
 
+    # def cleanup_index(self, imap):
+    #     indices = []
+    #     for index in self.indices:
+    #         if index in imap:
+    #             temp = idx_copy(index)
+    #             temp.index = imap[index]
+    #             indices.append(idx_copy(temp))
+    #         else:
+    #             indices.append(idx_copy(index))
+    #     return Tensor(indices, self.name, self.sym)
+
 def permute(t, p):
     name = str(t.name)
     indices = [t.indices[i] for i in p]
@@ -377,6 +388,15 @@ class Sigma(object):
         """
         if self.idx in index_dict:
             new_index = idx_copy(index_dict[self.idx])
+        else:
+            new_index = idx_copy(self.idx)
+        return Sigma(new_index)
+
+    def cleanup_index(self, imap):
+        if self.idx in imap:
+            temp = idx_copy(self.idx)
+            temp.index = imap[self.idx]
+            new_index = idx_copy(temp)
         else:
             new_index = idx_copy(self.idx)
         return Sigma(new_index)

@@ -109,7 +109,7 @@ print("------------------------------")
 
 # Define Hamiltonian
 H1 = one_e_spin("h", [("o_a", "v_a"), ("o_b", "v_b")], index_key=index_dict, )
-H2 = two_e_spin("g", [("o_a", "v_a"), ("o_b", "v_b")], index_key=index_dict, )
+H2 = get_g_oovo("g", ["o_a", "o_b"], ["v_a", "v_b"], index_key=index_dict, )
 
 # Use T1 transformed H
 H = H1 + H2
@@ -123,6 +123,8 @@ explicit_spin = AExpression(Ex=out)
 final = explicit_spin.update_index_spaces(space_dict)
 L = final.introduce_Coulomb_minus_Exchange("g", (0, 3, 2, 1), "L")
 print(make_nice_string(str(L)))
+#print()
+#print(make_nice_string(str(final)))
 
 
 print("\n\nRighthand side <^a_i| P^T |R>:")
@@ -151,5 +153,8 @@ explicit_spin = AExpression(Ex=out)
 
 # Replace ranges with explicit range by general ones
 final = explicit_spin.update_index_spaces(space_dict)
+print(make_nice_string(str(final)))
+print()
+print()
 L = final.introduce_Coulomb_minus_Exchange("g", (0, 3, 2, 1), "L")
 print(make_nice_string(str(L)))
