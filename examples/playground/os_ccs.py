@@ -1,13 +1,28 @@
-from doctest import NORMALIZE_WHITESPACE
 from fractions import Fraction
-from wick.expression import AExpression, Expression, Term
+from wick.expression import AExpression
 from wick.operator import Tensor
 from wick.wick import apply_wick
 from wick.convenience import commute
 from wick.convenience import one_e_spin, two_e_spin, get_g_oovo
 from wick.convenience import E1_spin, braE1_spin, bath_projector
 
-from re import finditer
+from re import findall
+
+def sort_by_deltas(string: str):
+    lines = string.split("\n")
+    delta_dict = {}
+    for line in lines:
+        #n_delta = line.count("delta_{")
+        deltas = "".join(sorted(findall(r"(delta_\{\w\w\})", line)))
+        if deltas in delta_dict:
+            delta_dict[deltas] += f"{line}\n"
+        else:
+            delta_dict[deltas] = f"{line}\n"
+    out = ""
+    for i in sorted(list(delta_dict)):
+        print(i)
+        out += delta_dict[i]
+    return out
 
 def introduce_exponent(string: str, tensor: str, position: int):
     exponent = string.count(tensor)
@@ -26,40 +41,6 @@ def make_nice_string(lines):
         out += "\n"
     final = out.replace("_{}", "")
     return final
-
-def find_and_replace_external_indices(lines, index_dict):
-    out = ""
-    for i, term in enumerate(lines.split("\n")):
-        is_sum = False
-        if "\\sum_{" in term:
-            is_sum = True
-
-        """
-        Find all indices, extract summation indices,
-        replace all other indices according to the dict
-        """
-        matches = finditer(r"_{(\w+)}", term)
-        previous_end = 0
-        sum_indices = "_{}"
-        new_term = ""
-        for m in matches:
-            # Add unmatched part of the string
-            new_term += term[previous_end:m.start()]
-            previous_end = m.end()
-            if not is_sum:
-                for char in m.group():
-                    if char in sum_indices or char not in index_dict:
-                        new_term += char
-                    else:
-                        new_term += index_dict[char]
-            else:
-                sum_indices = m.group()
-                new_term += m.group()
-            is_sum = False # Summation indices are found in first match
-
-        out += f"{new_term}{term[previous_end:]}\n"
-
-    return out
 
 o_general = "ijklmno"
 v_general = "abcdefg"
@@ -122,8 +103,11 @@ explicit_spin = AExpression(Ex=out)
 # Replace ranges with explicit range by general ones
 final = explicit_spin.update_index_spaces(space_dict)
 L = final.introduce_Coulomb_minus_Exchange("g", (0, 3, 2, 1), "L")
-print(make_nice_string(str(L)))
-
+F = L.introduce_Fock_matrix()
+print(make_nice_string(str(F)))
+new = sorted(F.terms, key=lambda x: len(x.tensors))
+#print("\n".join([t._print_str() for t in new]))
+print("\n".join([t._print_str() for t in new]))
 
 print("\n\nRighthand side <^a_i| P^T |R>:")
 print("------------------------------")
@@ -139,7 +123,7 @@ explicit_spin = AExpression(Ex=out)
 
 # Replace ranges with explicit range by general ones
 final = explicit_spin.update_index_spaces(space_dict)
-print(make_nice_string(str(final)))
+print(sort_by_deltas(make_nice_string(str(final))))
 
 
 print("\n\nLefthand side <^a_i| P^T H^T |R>:")
@@ -152,4 +136,8 @@ explicit_spin = AExpression(Ex=out)
 # Replace ranges with explicit range by general ones
 final = explicit_spin.update_index_spaces(space_dict)
 L = final.introduce_Coulomb_minus_Exchange("g", (0, 3, 2, 1), "L")
-print(make_nice_string(str(L)))
+F = L.introduce_Fock_matrix()
+print(make_nice_string(str(F)))
+
+new = sorted(F.terms, key=lambda x: len(x.tensors))
+print(sort_by_deltas("\n".join([t._print_str() for t in new])))

@@ -1,6 +1,6 @@
 # Copyright (c) 2020-2021 Alec White
 # Licensed under the MIT License (see LICENSE for details)
-from copy import copy
+from copy import copy, deepcopy
 from itertools import product
 from numbers import Number
 from .operator import Sigma, Tensor, permute, tensor_from_delta
@@ -1072,6 +1072,38 @@ class AExpression(object):
         new_terms = list(filter(lambda x: abs(x.scalar) > self.tthresh, new_terms))
         if redo:
             return self.introduce_Coulomb_minus_Exchange(tensor_name, permutation)
+        return AExpression(new_terms)
+
+    def introduce_Fock_matrix(self, occ="o"):
+        new_terms = []
+        matched_terms = [False for _ in self.terms]
+        for i, t1 in enumerate(self.terms):
+            if (matched_terms[i]): continue
+            for p, tensor in enumerate(t1.tensors):
+                if tensor.name != "h": continue
+                last_occupied_index = sorted([i.index for i in t1.ilist() if i.space == occ])[-1]
+                new_occupied_index = Idx(last_occupied_index + 1, occ)
+                L = Tensor(tensor.indices + [new_occupied_index, ]*2, "L")
+                sums = copy(t1.sums)
+                sums.append(Sigma(new_occupied_index))
+                tensors = copy(t1.tensors)
+                tensors[p] = L
+                L_term = ATerm(scalar=t1.scalar, sums=sums, tensors=tensors, index_key=t1.index_key)
+                for j, t2 in enumerate(self.terms):
+                    if i == j or matched_terms[j]: continue
+                    if L_term.permutation_matches(t2): # matches without scalar
+                        Fock_term = deepcopy(t1)
+                        Fock_term.scalar = t2.scalar
+                        Fock_term.tensors[p].name = "F"
+                        new_terms.append(Fock_term)
+                        t1.scalar -= t2.scalar
+                        new_terms.append(t1)
+                        matched_terms[i] = True
+                        matched_terms[j] = True
+                        break
+            if not matched_terms[i]:
+                new_terms.append(t1)
+        new_terms = list(filter(lambda x: abs(x.scalar) > self.tthresh, new_terms))
         return AExpression(new_terms)
 
 
