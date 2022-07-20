@@ -5,42 +5,8 @@ from wick.wick import apply_wick
 from wick.convenience import commute
 from wick.convenience import one_e_spin, two_e_spin, get_g_oovo
 from wick.convenience import E1_spin, braE1_spin, bath_projector
+from wick.postprocessing_tools import sort_by_deltas, simplify_sin_cos_tensors
 
-from re import findall
-
-def sort_by_deltas(string: str):
-    lines = string.split("\n")
-    delta_dict = {}
-    for line in lines:
-        #n_delta = line.count("delta_{")
-        deltas = "".join(sorted(findall(r"(delta_\{\w\w\})", line)))
-        if deltas in delta_dict:
-            delta_dict[deltas] += f"{line}\n"
-        else:
-            delta_dict[deltas] = f"{line}\n"
-    out = ""
-    for i in sorted(list(delta_dict)):
-        print(i)
-        out += delta_dict[i]
-    return out
-
-def introduce_exponent(string: str, tensor: str, position: int):
-    exponent = string.count(tensor)
-    if exponent == 1:
-        return string
-    temp = string.replace(tensor, "", exponent-1)
-    replacement = f"{tensor[:position]}^{{{exponent}}}{tensor[position:]}"
-    out = temp.replace(tensor, replacement, 1)
-    return out
-
-def make_nice_string(lines):
-    out = ""
-    for term in lines.split("\n"):
-        temp = introduce_exponent(term, "\\sin(\\theta)_{}", 4)
-        out += introduce_exponent(temp, "\\cos(\\theta)_{}", 4)
-        out += "\n"
-    final = out.replace("_{}", "")
-    return final
 
 o_general = "ijklmno"
 v_general = "abcdefg"
@@ -82,7 +48,7 @@ explicit_spin = AExpression(Ex=out)
 # Replace ranges with explicit range by general ones
 space_dict = {"o_a": "o", "o_b": "o", "v_a": "v", "v_b": "v"}
 final = explicit_spin.update_index_spaces(space_dict)
-print(make_nice_string(str(final)))
+print(simplify_sin_cos_tensors(str(final)))
 
 
 print("\n\nLefthand side <R| P^T H^T |R>:")
@@ -104,7 +70,7 @@ explicit_spin = AExpression(Ex=out)
 final = explicit_spin.update_index_spaces(space_dict)
 L = final.introduce_Coulomb_minus_Exchange("g", (0, 3, 2, 1), "L")
 F = L.introduce_Fock_matrix()
-print(make_nice_string(str(F)))
+print(simplify_sin_cos_tensors(str(F)))
 new = sorted(F.terms, key=lambda x: len(x.tensors))
 #print("\n".join([t._print_str() for t in new]))
 print("\n".join([t._print_str() for t in new]))
@@ -123,7 +89,7 @@ explicit_spin = AExpression(Ex=out)
 
 # Replace ranges with explicit range by general ones
 final = explicit_spin.update_index_spaces(space_dict)
-print(sort_by_deltas(make_nice_string(str(final))))
+print(sort_by_deltas(simplify_sin_cos_tensors(str(final))))
 
 
 print("\n\nLefthand side <^a_i| P^T H^T |R>:")
@@ -137,7 +103,6 @@ explicit_spin = AExpression(Ex=out)
 final = explicit_spin.update_index_spaces(space_dict)
 L = final.introduce_Coulomb_minus_Exchange("g", (0, 3, 2, 1), "L")
 F = L.introduce_Fock_matrix()
-print(make_nice_string(str(F)))
+#print(simplify_sin_cos_tensors())
 
-new = sorted(F.terms, key=lambda x: len(x.tensors))
-print(sort_by_deltas("\n".join([t._print_str() for t in new])))
+print(simplify_sin_cos_tensors(sort_by_deltas(str(F))))
